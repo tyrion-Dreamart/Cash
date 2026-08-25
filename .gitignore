@@ -1,0 +1,42 @@
+# ── Secrets / environment ──────────────────────────────
+backend/.env
+backend/set_env.ps1
+frontend/.env.local
+*.env
+!.env.example
+
+# ── Real business data — never commit ──────────────────
+backend/*.xlsm
+backend/*.xlsx
+
+# ── One-off / debug scripts (hardcoded local creds, not part of the app) ──
+backend/fix_*.py
+backend/fix[0-9]*.py
+backend/debug*.py
+backend/create_users.py
+backend/create_viewer.py
+backend/setup_users.py
+backend/import_cartera.py
+backend/import_cartera_v2.py
+backend/find_payable.py
+backend/add_bank_positions.ps1
+
+# ── Stray misplaced frontend copies left inside backend/ ──
+backend/api_update.ts
+backend/bank_positions_page.tsx
+
+# ── Python ──────────────────────────────────────────────
+backend/venv/
+**/__pycache__/
+*.pyc
+
+# ── Node / Next.js ──────────────────────────────────────
+frontend/node_modules/
+frontend/.next/
+frontend/next-env.d.ts
+*.tsbuildinfo
+npm-debug.log*
+
+# ── OS / editor ─────────────────────────────────────────
+.DS_Store
+Thumbs.db
