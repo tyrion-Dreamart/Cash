@@ -37,6 +37,9 @@ frontend/next-env.d.ts
 *.tsbuildinfo
 npm-debug.log*
 
+# ── Claude Code local/personal settings ─────────────────
+.claude/settings.local.json
+
 # ── OS / editor ─────────────────────────────────────────
 .DS_Store
 Thumbs.db
