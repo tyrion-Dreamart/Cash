@@ -185,15 +185,19 @@ class BankPositionBase(BaseModel):
     balance_book: Optional[float] = None
     notes: Optional[str] = None
 
-    @field_validator("bank_name", "account_label")
+# bank_name is required to be non-blank only on write (Create/Update): it's the signal that
+# no account was picked from the dropdown. account_label is allowed to be blank — some real
+# bank_accounts rows (e.g. BBVA MXN, Santander MXN) legitimately have no account number on
+# file, so it must NOT be validated here, and neither field is validated on BankPositionBase
+# itself since BankPositionOut (read/serialize existing rows) inherits from it too.
+class BankPositionCreate(BankPositionBase):
+    @field_validator("bank_name")
     @classmethod
     def not_blank(cls, v):
         v = v.strip() if v else v
         if not v:
             raise ValueError("no puede estar vacio")
         return v
-
-class BankPositionCreate(BankPositionBase): pass
 
 class BankPositionUpdate(BaseModel):
     position_date: Optional[date] = None
@@ -205,7 +209,7 @@ class BankPositionUpdate(BaseModel):
     balance_book: Optional[float] = None
     notes: Optional[str] = None
 
-    @field_validator("bank_name", "account_label")
+    @field_validator("bank_name")
     @classmethod
     def not_blank(cls, v):
         if v is None:
