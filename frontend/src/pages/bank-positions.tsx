@@ -42,6 +42,7 @@ export default function BankPositionsPage() {
   useEffect(() => { load() }, [selectedDate, fx])
 
   const save = async () => {
+    if(!form.bank_name || !form.account_label) { alert("Selecciona una cuenta bancaria antes de guardar."); return }
     const d = {...form, balance_available:parseFloat(form.balance_available), balance_book:form.balance_book?parseFloat(form.balance_book):null}
     if(editId) await req(`/bank-positions/${editId}`,{method:"PUT",body:JSON.stringify(d)})
     else await req("/bank-positions",{method:"POST",body:JSON.stringify(d)})

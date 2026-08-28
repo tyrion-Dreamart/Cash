@@ -26,8 +26,20 @@ def list_positions(
 
 @router.post("", response_model=schemas.BankPositionOut, dependencies=[Depends(require_editor)])
 def create_position(data: schemas.BankPositionCreate, db: Session = Depends(get_db)):
-    obj = models.BankPosition(**data.model_dump())
-    db.add(obj); db.commit(); db.refresh(obj)
+    # Ya existe una captura para esta cuenta y fecha: actualiza en vez de duplicar
+    existing = db.query(models.BankPosition).filter(
+        models.BankPosition.position_date == data.position_date,
+        models.BankPosition.bank_name == data.bank_name,
+        models.BankPosition.account_label == data.account_label,
+    ).first()
+    if existing:
+        for k, v in data.model_dump().items():
+            setattr(existing, k, v)
+        db.commit(); db.refresh(existing)
+        obj = existing
+    else:
+        obj = models.BankPosition(**data.model_dump())
+        db.add(obj); db.commit(); db.refresh(obj)
 
     # Auto-send report when all accounts updated today
     try:

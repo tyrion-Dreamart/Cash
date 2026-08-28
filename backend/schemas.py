@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional
 from datetime import date, datetime
 from uuid import UUID
@@ -185,40 +185,12 @@ class BankPositionBase(BaseModel):
     balance_book: Optional[float] = None
     notes: Optional[str] = None
 
-class BankPositionCreate(BankPositionBase): pass
-
-class BankPositionUpdate(BaseModel):
-    position_date: Optional[date] = None
-    country: Optional[str] = None
-    bank_name: Optional[str] = None
-    account_label: Optional[str] = None
-    currency: Optional[str] = None
-    balance_available: Optional[float] = None
-    balance_book: Optional[float] = None
-    notes: Optional[str] = None
-
-class BankPositionOut(BankPositionBase):
-    id: UUID
-    created_at: datetime
-    class Config: from_attributes = True
-
-class BankPositionSummary(BaseModel):
-    position_date: date
-    by_country: list[dict]
-    by_currency: list[dict]
-    total_usd_equiv: float
-    fx_rate: float
-    vs_yesterday: float
-    missing_today: list[str]
-class BankPositionBase(BaseModel):
-    position_date: date
-    country: Optional[str] = None
-    bank_name: str
-    account_label: str
-    currency: str
-    balance_available: float
-    balance_book: Optional[float] = None
-    notes: Optional[str] = None
+    @field_validator("bank_name", "account_label")
+    @classmethod
+    def not_blank(cls, v):
+        if not v or not v.strip():
+            raise ValueError("no puede estar vacio")
+        return v
 
 class BankPositionCreate(BankPositionBase): pass
 
