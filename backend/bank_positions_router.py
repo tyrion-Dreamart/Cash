@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from typing import Optional, List
 from datetime import date, timedelta
 from uuid import UUID
@@ -26,20 +27,17 @@ def list_positions(
 
 @router.post("", response_model=schemas.BankPositionOut, dependencies=[Depends(require_editor)])
 def create_position(data: schemas.BankPositionCreate, db: Session = Depends(get_db)):
-    # Ya existe una captura para esta cuenta y fecha: actualiza en vez de duplicar
-    existing = db.query(models.BankPosition).filter(
-        models.BankPosition.position_date == data.position_date,
-        models.BankPosition.bank_name == data.bank_name,
-        models.BankPosition.account_label == data.account_label,
-    ).first()
-    if existing:
-        for k, v in data.model_dump().items():
-            setattr(existing, k, v)
-        db.commit(); db.refresh(existing)
-        obj = existing
-    else:
-        obj = models.BankPosition(**data.model_dump())
-        db.add(obj); db.commit(); db.refresh(obj)
+    # Upsert atomico: una captura para la misma cuenta y fecha actualiza en vez de duplicar,
+    # incluso si dos requests llegan al mismo tiempo (constraint uq_bank_position_date_account).
+    values = data.model_dump()
+    stmt = pg_insert(models.BankPosition).values(**values)
+    update_cols = {k: v for k, v in values.items() if k not in ("position_date", "bank_name", "account_label")}
+    stmt = stmt.on_conflict_do_update(
+        index_elements=["position_date", "bank_name", "account_label"],
+        set_=update_cols,
+    ).returning(models.BankPosition)
+    obj = db.scalars(stmt).one()
+    db.commit()
 
     # Auto-send report when all accounts updated today
     try:
@@ -51,8 +49,21 @@ def create_position(data: schemas.BankPositionCreate, db: Session = Depends(get_
         ).count()
         if total_accounts > 0 and updated_today >= total_accounts:
             from report_service import send_daily_report
+            from database import SessionLocal
             import threading
-            threading.Thread(target=send_daily_report, args=(db,), daemon=True).start()
+
+            def _send_report_bg():
+                # Sesion propia: la de este request se cierra en cuanto la respuesta
+                # HTTP termina, y no puede compartirse con un hilo en segundo plano.
+                report_db = SessionLocal()
+                try:
+                    result = send_daily_report(report_db)
+                    if not result.get("ok"):
+                        print(f"Auto report send failed: {result.get('error')}")
+                finally:
+                    report_db.close()
+
+            threading.Thread(target=_send_report_bg, daemon=True).start()
     except Exception as e:
         print(f"Auto report error: {e}")
 

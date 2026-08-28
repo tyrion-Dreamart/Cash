@@ -188,7 +188,8 @@ class BankPositionBase(BaseModel):
     @field_validator("bank_name", "account_label")
     @classmethod
     def not_blank(cls, v):
-        if not v or not v.strip():
+        v = v.strip() if v else v
+        if not v:
             raise ValueError("no puede estar vacio")
         return v
 
@@ -203,6 +204,16 @@ class BankPositionUpdate(BaseModel):
     balance_available: Optional[float] = None
     balance_book: Optional[float] = None
     notes: Optional[str] = None
+
+    @field_validator("bank_name", "account_label")
+    @classmethod
+    def not_blank(cls, v):
+        if v is None:
+            return v
+        v = v.strip()
+        if not v:
+            raise ValueError("no puede estar vacio")
+        return v
 
 class BankPositionOut(BankPositionBase):
     id: UUID
