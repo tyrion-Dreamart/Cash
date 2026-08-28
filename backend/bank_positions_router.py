@@ -91,7 +91,6 @@ def get_summary(
     db: Session = Depends(get_db)
 ):
     today = date.today()
-    yesterday = today - timedelta(days=1)
 
     today_rows = db.query(models.BankPosition).filter(
         models.BankPosition.position_date == today
@@ -106,6 +105,9 @@ def get_summary(
             ).all()
             today = latest
 
+    # Calculado despues del fallback: si "today" paso a ser el ultimo dia
+    # disponible, "yesterday" debe ser el dia anterior a ESE, no a la fecha real de hoy.
+    yesterday = today - timedelta(days=1)
     yesterday_rows = db.query(models.BankPosition).filter(
         models.BankPosition.position_date == yesterday
     ).all()

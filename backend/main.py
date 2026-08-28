@@ -38,10 +38,14 @@ app.include_router(feedback_router.router, dependencies=[Depends(get_current_use
 app.include_router(export_router.router, dependencies=[Depends(get_current_user)])
 app.include_router(contacts_router.router, dependencies=[Depends(get_current_user)])
 app.include_router(reclassify_router.router, dependencies=[Depends(get_current_user)])
+ALLOWED_ORIGINS = [
+    "https://cash.dreamartworkingcapital.com",
+    "http://localhost:3000",
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
