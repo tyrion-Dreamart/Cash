@@ -213,6 +213,13 @@ export default function PayablesPage() {
       <div style={{display:"flex",justifyContent:"flex-end",marginBottom:8}}>
         <button onClick={()=>{
           const params = new URLSearchParams()
+          const tabStatus: Record<string,string> = {
+            active: "pendiente,programado",
+            parcial: "parcial",
+            pagado: "pagado",
+            all: "pendiente,programado,parcial,pagado",
+          }
+          if (tabStatus[activeTab]) params.append("status_cxp", tabStatus[activeTab])
           if (filterCountry) params.append("country", filterCountry)
           if (filterHotel) params.append("hotel", filterHotel)
           if (filterDateFrom) params.append("date_from", filterDateFrom)

@@ -221,6 +221,13 @@ export default function ReceivablesPage() {
       <div style={{display:"flex",justifyContent:"flex-end",marginBottom:8}}>
         <button onClick={()=>{
           const params = new URLSearchParams()
+          const tabStatus: Record<string,string> = {
+            active: "pendiente,vencido",
+            parcial: "parcial",
+            cobrado: "cobrado",
+            all: "pendiente,vencido,parcial,cobrado",
+          }
+          if (tabStatus[activeTab]) params.append("status_cxc", tabStatus[activeTab])
           if (filterCountry) params.append("country", filterCountry)
           if (filterHotel) params.append("hotel", filterHotel)
           if (filterDateFrom) params.append("date_from", filterDateFrom)

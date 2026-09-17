@@ -426,21 +426,30 @@ def export_cxc_cxp(
     db: Session = Depends(get_db)
 ):
     # CXC
-    q_cxc = db.query(models.Receivable).filter(models.Receivable.status != "cobrado")
+    # status_cxc accepts a comma-separated list (e.g. "pendiente,vencido") so the
+    # export can mirror whichever tab is active on the Receivables page. With no
+    # value given, keep the historical default of excluding fully collected items.
+    q_cxc = db.query(models.Receivable)
+    if status_cxc:
+        q_cxc = q_cxc.filter(models.Receivable.status.in_([s.strip() for s in status_cxc.split(",") if s.strip()]))
+    else:
+        q_cxc = q_cxc.filter(models.Receivable.status != "cobrado")
     if country: q_cxc = q_cxc.filter(models.Receivable.country == country)
     if hotel: q_cxc = q_cxc.filter(models.Receivable.hotel.ilike(f"%{hotel}%"))
     if date_from: q_cxc = q_cxc.filter(models.Receivable.due_date >= date_from)
     if date_to: q_cxc = q_cxc.filter(models.Receivable.due_date <= date_to)
-    if status_cxc: q_cxc = q_cxc.filter(models.Receivable.status == status_cxc)
     cxc_rows = q_cxc.order_by(models.Receivable.client_name, models.Receivable.due_date).all()
 
-    # CXP
-    q_cxp = db.query(models.Payable).filter(models.Payable.status != "pagado")
+    # CXP — same comma-separated convention as status_cxc, mirroring the Payables tabs.
+    q_cxp = db.query(models.Payable)
+    if status_cxp:
+        q_cxp = q_cxp.filter(models.Payable.status.in_([s.strip() for s in status_cxp.split(",") if s.strip()]))
+    else:
+        q_cxp = q_cxp.filter(models.Payable.status != "pagado")
     if country: q_cxp = q_cxp.filter(models.Payable.country == country)
     if hotel: q_cxp = q_cxp.filter(models.Payable.hotel.ilike(f"%{hotel}%"))
     if date_from: q_cxp = q_cxp.filter(models.Payable.due_date >= date_from)
     if date_to: q_cxp = q_cxp.filter(models.Payable.due_date <= date_to)
-    if status_cxp: q_cxp = q_cxp.filter(models.Payable.status == status_cxp)
     cxp_rows = q_cxp.order_by(models.Payable.vendor_name, models.Payable.due_date).all()
 
     # models.Other has no `country` column (unlike Receivable/Payable), so it's
