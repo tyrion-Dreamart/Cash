@@ -266,20 +266,20 @@ def make_excel(cxc_rows, cxp_rows, others_rows=[], fx=FX):
     # ── OTHERS ──────────────────────────────────────────────
     ws4 = wb.create_sheet("Otros - Others")
     ws4.sheet_view.showGridLines = False
-    for col, w in zip("ABCDEFGHI", [30,10,15,15,15,13,13,20,35]):
+    for col, w in zip("ABCDEFGHIJ", [30,10,15,15,15,15,13,13,20,35]):
         ws4.column_dimensions[col].width = w
 
-    ws4.merge_cells("A1:I1")
+    ws4.merge_cells("A1:J1")
     ws4["A1"] = "OTROS — Reembolsos / Anticipos / Garantias"
     ws4["A1"].font=Font(name="Arial",bold=True,size=12,color="FFFFFF"); ws4["A1"].fill=fill("7C3AED")
     ws4["A1"].alignment=Alignment(horizontal="left",vertical="center",indent=1); ws4.row_dimensions[1].height=26
 
-    ws4.merge_cells("A2:I2")
+    ws4.merge_cells("A2:J2")
     ws4["A2"] = f"Generado: {date.today().strftime('%d/%m/%Y')}  |  FX: {fx} MXN/USD"
     ws4["A2"].font=Font(name="Arial",size=9,color="6B7280"); ws4["A2"].fill=fill(GRAY); ws4["A2"].alignment=Alignment(horizontal="left",indent=1)
 
     row = 3
-    for col, h in enumerate(["Concepto","Direccion","Monto USD","Monto MXN","Saldo USD","Moneda","Vencimiento","Contraparte","Notas"],1):
+    for col, h in enumerate(["Concepto","Direccion","Monto USD","Monto MXN","Saldo USD","Saldo MXN","Moneda","Vencimiento","Contraparte","Notas"],1):
         c = ws4.cell(row=row,column=col,value=h)
         c.font=Font(name="Arial",bold=True,size=10,color="FFFFFF"); c.fill=fill("7C3AED"); c.border=bdr(); c.alignment=Alignment(horizontal="center")
     ws4.row_dimensions[row].height=20
@@ -295,17 +295,18 @@ def make_excel(cxc_rows, cxp_rows, others_rows=[], fx=FX):
         bal = to_usd(float(o.amount) - float(o.amount_paid or 0), o.currency, fx)
         cur = str(o.currency).replace("Currency.","")
         orig_mxn = round(float(o.amount) * fx, 2) if cur == "USD" else round(float(o.amount), 2)
+        bal_mxn = round((float(o.amount) - float(o.amount_paid or 0)) * fx, 2) if cur == "USD" else round(float(o.amount) - float(o.amount_paid or 0), 2)
 
         if direction == "pagar": others_total_pay += bal
         else: others_total_collect += bal
 
         bg = RED_L if (is_overdue and direction=="pagar") else (GREEN_L if direction=="cobrar" else (GRAY if i%2==0 else "FFFFFF"))
-        data = [o.concept or "--", direction, round(orig,2), round(orig_mxn,2) if cur!="MXN" else "--", round(bal,2), cur, str(due) if due else "--", o.counterparty or "--", o.comments or "--"]
+        data = [o.concept or "--", direction, round(orig,2), round(orig_mxn,2) if cur!="MXN" else "--", round(bal,2), round(bal_mxn,2) if cur!="MXN" else "--", cur, str(due) if due else "--", o.counterparty or "--", o.comments or "--"]
         for col, val in enumerate(data,1):
             c = ws4.cell(row=row,column=col,value=val)
             c.border=bdr(); c.fill=fill(bg)
-            if col in [3,4,5]: c.number_format="$#,##0.00"; c.alignment=Alignment(horizontal="right"); c.font=Font(name="Arial",size=9,color=RED_D if (is_overdue and direction=="pagar") else GREEN_D if direction=="cobrar" else "111827")
-            elif col==7: c.font=Font(name="Arial",size=9,bold=is_overdue,color=RED_D if is_overdue else "111827"); c.alignment=Alignment(horizontal="center")
+            if col in [3,4,5,6]: c.number_format="$#,##0.00"; c.alignment=Alignment(horizontal="right"); c.font=Font(name="Arial",size=9,color=RED_D if (is_overdue and direction=="pagar") else GREEN_D if direction=="cobrar" else "111827")
+            elif col==8: c.font=Font(name="Arial",size=9,bold=is_overdue,color=RED_D if is_overdue else "111827"); c.alignment=Alignment(horizontal="center")
             else: c.font=Font(name="Arial",size=9,color="111827"); c.alignment=Alignment(horizontal="left")
         ws4.row_dimensions[row].height=15
 
@@ -314,14 +315,14 @@ def make_excel(cxc_rows, cxp_rows, others_rows=[], fx=FX):
     ws4.merge_cells(f"A{row}:B{row}")
     c=ws4.cell(row=row,column=1,value="TOTAL A PAGAR"); c.font=Font(name="Arial",bold=True,size=10,color="FFFFFF"); c.fill=fill(RED_D); c.border=bdr(); c.alignment=Alignment(indent=1)
     c=ws4.cell(row=row,column=5,value=round(others_total_pay,2)); c.font=Font(name="Arial",bold=True,size=10,color="FFFFFF"); c.fill=fill(RED_D); c.border=bdr(); c.number_format="$#,##0.00"; c.alignment=Alignment(horizontal="right")
-    for col in [3,4,6,7,8,9]: ws4.cell(row=row,column=col).fill=fill(RED_D); ws4.cell(row=row,column=col).border=bdr()
+    for col in [3,4,6,7,8,9,10]: ws4.cell(row=row,column=col).fill=fill(RED_D); ws4.cell(row=row,column=col).border=bdr()
     ws4.row_dimensions[row].height=20
 
     row += 1
     ws4.merge_cells(f"A{row}:B{row}")
     c=ws4.cell(row=row,column=1,value="TOTAL A COBRAR"); c.font=Font(name="Arial",bold=True,size=10,color="FFFFFF"); c.fill=fill(GREEN_D); c.border=bdr(); c.alignment=Alignment(indent=1)
     c=ws4.cell(row=row,column=5,value=round(others_total_collect,2)); c.font=Font(name="Arial",bold=True,size=10,color="FFFFFF"); c.fill=fill(GREEN_D); c.border=bdr(); c.number_format="$#,##0.00"; c.alignment=Alignment(horizontal="right")
-    for col in [3,4,6,7,8,9]: ws4.cell(row=row,column=col).fill=fill(GREEN_D); ws4.cell(row=row,column=col).border=bdr()
+    for col in [3,4,6,7,8,9,10]: ws4.cell(row=row,column=col).fill=fill(GREEN_D); ws4.cell(row=row,column=col).border=bdr()
     ws4.row_dimensions[row].height=20
 
     buf = BytesIO()
@@ -337,24 +338,24 @@ def make_others_excel(others_rows, fx=FX):
     ws = wb.active
     ws.title = "Otros - Others"
     ws.sheet_view.showGridLines = False
-    for col, w in zip("ABCDEFGHI", [30,10,15,15,15,13,13,20,35]):
+    for col, w in zip("ABCDEFGHIJ", [30,10,15,15,15,15,13,13,20,35]):
         ws.column_dimensions[col].width = w
 
-    ws.merge_cells("A1:I1")
+    ws.merge_cells("A1:J1")
     ws["A1"] = "DREAMART PHOTOGRAPHY GROUP — OTROS (Reembolsos / Anticipos / Garantias)"
     ws["A1"].font = Font(name="Arial", bold=True, size=12, color="FFFFFF")
     ws["A1"].fill = fill("7C3AED")
     ws["A1"].alignment = Alignment(horizontal="left", vertical="center", indent=1)
     ws.row_dimensions[1].height = 26
 
-    ws.merge_cells("A2:I2")
+    ws.merge_cells("A2:J2")
     ws["A2"] = f"Generado: {today.strftime('%d/%m/%Y')}  |  FX: {fx} MXN/USD"
     ws["A2"].font = Font(name="Arial", size=9, color="6B7280")
     ws["A2"].fill = fill(GRAY); ws["A2"].alignment = Alignment(horizontal="left", indent=1)
     ws.row_dimensions[2].height = 16
 
     row = 3
-    for col, h in enumerate(["Concepto","Direccion","Monto USD","Monto MXN","Saldo USD","Moneda","Vencimiento","Contraparte","Notas"],1):
+    for col, h in enumerate(["Concepto","Direccion","Monto USD","Monto MXN","Saldo USD","Saldo MXN","Moneda","Vencimiento","Contraparte","Notas"],1):
         c = ws.cell(row=row,column=col,value=h)
         c.font=Font(name="Arial",bold=True,size=10,color="FFFFFF"); c.fill=fill("7C3AED"); c.border=bdr(); c.alignment=Alignment(horizontal="center")
     ws.row_dimensions[row].height=20
@@ -370,17 +371,18 @@ def make_others_excel(others_rows, fx=FX):
         bal = to_usd(float(o.amount) - float(o.amount_paid or 0), o.currency, fx)
         cur = str(o.currency).replace("Currency.","")
         orig_mxn = round(float(o.amount) * fx, 2) if cur == "USD" else round(float(o.amount), 2)
+        bal_mxn = round((float(o.amount) - float(o.amount_paid or 0)) * fx, 2) if cur == "USD" else round(float(o.amount) - float(o.amount_paid or 0), 2)
 
         if direction == "pagar": others_total_pay += bal
         else: others_total_collect += bal
 
         bg = RED_L if (is_overdue and direction=="pagar") else (GREEN_L if direction=="cobrar" else (GRAY if i%2==0 else "FFFFFF"))
-        data = [o.concept or "--", direction, round(orig,2), round(orig_mxn,2) if cur!="MXN" else "--", round(bal,2), cur, str(due) if due else "--", o.counterparty or "--", o.comments or "--"]
+        data = [o.concept or "--", direction, round(orig,2), round(orig_mxn,2) if cur!="MXN" else "--", round(bal,2), round(bal_mxn,2) if cur!="MXN" else "--", cur, str(due) if due else "--", o.counterparty or "--", o.comments or "--"]
         for col, val in enumerate(data,1):
             c = ws.cell(row=row,column=col,value=val)
             c.border=bdr(); c.fill=fill(bg)
-            if col in [3,4,5]: c.number_format="$#,##0.00"; c.alignment=Alignment(horizontal="right"); c.font=Font(name="Arial",size=9,color=RED_D if (is_overdue and direction=="pagar") else GREEN_D if direction=="cobrar" else "111827")
-            elif col==7: c.font=Font(name="Arial",size=9,bold=is_overdue,color=RED_D if is_overdue else "111827"); c.alignment=Alignment(horizontal="center")
+            if col in [3,4,5,6]: c.number_format="$#,##0.00"; c.alignment=Alignment(horizontal="right"); c.font=Font(name="Arial",size=9,color=RED_D if (is_overdue and direction=="pagar") else GREEN_D if direction=="cobrar" else "111827")
+            elif col==8: c.font=Font(name="Arial",size=9,bold=is_overdue,color=RED_D if is_overdue else "111827"); c.alignment=Alignment(horizontal="center")
             else: c.font=Font(name="Arial",size=9,color="111827"); c.alignment=Alignment(horizontal="left")
         ws.row_dimensions[row].height=15
 
@@ -388,14 +390,14 @@ def make_others_excel(others_rows, fx=FX):
     ws.merge_cells(f"A{row}:B{row}")
     c=ws.cell(row=row,column=1,value="TOTAL A PAGAR"); c.font=Font(name="Arial",bold=True,size=10,color="FFFFFF"); c.fill=fill(RED_D); c.border=bdr(); c.alignment=Alignment(indent=1)
     c=ws.cell(row=row,column=5,value=round(others_total_pay,2)); c.font=Font(name="Arial",bold=True,size=10,color="FFFFFF"); c.fill=fill(RED_D); c.border=bdr(); c.number_format="$#,##0.00"; c.alignment=Alignment(horizontal="right")
-    for col in [3,4,6,7,8,9]: ws.cell(row=row,column=col).fill=fill(RED_D); ws.cell(row=row,column=col).border=bdr()
+    for col in [3,4,6,7,8,9,10]: ws.cell(row=row,column=col).fill=fill(RED_D); ws.cell(row=row,column=col).border=bdr()
     ws.row_dimensions[row].height=20
 
     row += 1
     ws.merge_cells(f"A{row}:B{row}")
     c=ws.cell(row=row,column=1,value="TOTAL A COBRAR"); c.font=Font(name="Arial",bold=True,size=10,color="FFFFFF"); c.fill=fill(GREEN_D); c.border=bdr(); c.alignment=Alignment(indent=1)
     c=ws.cell(row=row,column=5,value=round(others_total_collect,2)); c.font=Font(name="Arial",bold=True,size=10,color="FFFFFF"); c.fill=fill(GREEN_D); c.border=bdr(); c.number_format="$#,##0.00"; c.alignment=Alignment(horizontal="right")
-    for col in [3,4,6,7,8,9]: ws.cell(row=row,column=col).fill=fill(GREEN_D); ws.cell(row=row,column=col).border=bdr()
+    for col in [3,4,6,7,8,9,10]: ws.cell(row=row,column=col).fill=fill(GREEN_D); ws.cell(row=row,column=col).border=bdr()
     ws.row_dimensions[row].height=20
 
     row += 1
@@ -403,7 +405,7 @@ def make_others_excel(others_rows, fx=FX):
     net = others_total_collect - others_total_pay
     c=ws.cell(row=row,column=1,value="NETO"); c.font=Font(name="Arial",bold=True,size=11,color="FFFFFF"); c.fill=fill(DARK); c.border=bdr(); c.alignment=Alignment(indent=1)
     c=ws.cell(row=row,column=5,value=round(net,2)); c.font=Font(name="Arial",bold=True,size=11,color="FFFFFF"); c.fill=fill(DARK); c.border=bdr(); c.number_format="$#,##0.00"; c.alignment=Alignment(horizontal="right")
-    for col in [3,4,6,7,8,9]: ws.cell(row=row,column=col).fill=fill(DARK); ws.cell(row=row,column=col).border=bdr()
+    for col in [3,4,6,7,8,9,10]: ws.cell(row=row,column=col).fill=fill(DARK); ws.cell(row=row,column=col).border=bdr()
     ws.row_dimensions[row].height=22
 
     buf = BytesIO()
