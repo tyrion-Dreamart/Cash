@@ -443,8 +443,9 @@ def export_cxc_cxp(
     if status_cxp: q_cxp = q_cxp.filter(models.Payable.status == status_cxp)
     cxp_rows = q_cxp.order_by(models.Payable.vendor_name, models.Payable.due_date).all()
 
+    # models.Other has no `country` column (unlike Receivable/Payable), so it's
+    # intentionally not filterable by country here — see /export/others.
     q_others = db.query(models.Other).filter(models.Other.status.notin_(["liquidado","cancelado"]))
-    if country: q_others = q_others.filter(models.Other.country == country)
     if date_from: q_others = q_others.filter(models.Other.due_date >= date_from)
     if date_to: q_others = q_others.filter(models.Other.due_date <= date_to)
     others_rows = q_others.order_by(models.Other.due_date).all()
